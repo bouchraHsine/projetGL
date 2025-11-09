@@ -6,7 +6,7 @@
   }
   
   .add-button {
-    background-color: #4CAF50;
+    background-color: #2211b8;
     color: white;
     padding: 10px 15px;
     border: none;
@@ -16,7 +16,7 @@
   }
   
   .add-button:hover {
-    background-color: #45a049;
+    background-color: #1511e2;
   }
   
   ul {
@@ -36,7 +36,7 @@
   
   ul li a {
     text-decoration: none;
-    color: #007BFF;
+    color: #0967cc;
     font-weight: bold;
   }
   

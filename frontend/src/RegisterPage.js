@@ -1,11 +1,17 @@
 import axios from 'axios';
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { FiUser, FiMail, FiLock, FiArrowRight, FiShield, FiBriefcase, FiStar, FiAward } from 'react-icons/fi';
+
+// Import des images
+import logo from './assets/neohealth-logo.jpg';
+import medicalImage from './assets/hero2.jpg';
 
 function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [specialty, setSpecialty] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -18,7 +24,7 @@ function RegisterPage() {
     try {
       const response = await axios.post(
         'http://localhost:5000/api/auth/register',
-        { name: fullName, email, password }
+        { name: fullName, email, password, specialty }
       );
 
       localStorage.setItem('authToken', response.data.token);
@@ -33,89 +39,151 @@ function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900 flex items-center justify-center p-4">
-      <div className="relative w-full max-w-md">
-        <div className="absolute -inset-1 bg-gradient-to-r from-pink-400 to-blue-500 rounded-2xl blur opacity-30 animate-pulse"></div>
-
-        <div className="relative backdrop-blur-xl bg-black/30 rounded-2xl shadow-lg border border-pink-400/20 p-8 space-y-8">
-          <div className="text-center">
-          <h2 className="text-4xl font-bold text-indigo-600 text-center mb-6">
-              Nouveau Compte
-            </h2>
-            
-            <p className="mt-2 text-gray-400">Accès professionnel</p>
+    <div className="split-auth-page">
+      {/* Côté gauche - Formulaire */}
+      <div className="split-form-side">
+        <div className="split-form-container">
+          {/* Logo */}
+          <div className="split-logo">
+            <img src={logo} alt="NeoHealth Logo" className="split-logo-img" />
+            <h1>Clinique NeoHealth</h1>
           </div>
 
+          {/* En-tête */}
+          <div className="split-header">
+            <h2>Join Our Team</h2>
+            <p>Create your professional account</p>
+          </div>
+
+          {/* Message d'erreur */}
           {error && (
-            <div className="bg-red-900/50 border border-red-400/30 p-4 rounded-lg flex items-center space-x-3">
-              <span className="text-red-300">{error}</span>
+            <div className="split-error-message">
+              <FiShield className="error-icon" />
+              <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleRegister} className="space-y-6">
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-pink-300">Nom complet</label>
-                <div className="mt-1 group relative">
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full bg-black/40 border-2 border-pink-400/20 rounded-xl py-3 px-4 text-gray-100 placeholder-gray-500 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/30 transition-all"
-                    placeholder="Dr. Jane Smith"
-                    required
-                  />
-                </div>
-              </div>
+          {/* Formulaire */}
+          <form onSubmit={handleRegister} className="split-form">
+            <div className="split-form-group">
+              <label className="split-form-label">
+                <FiUser className="icon" />
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="split-form-input"
+                placeholder="Dr. Jean Dupont"
+                required
+              />
+            </div>
 
-              <div>
-                <label className="text-sm font-medium text-pink-300">Email</label>
-                <div className="mt-1 group relative">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-black/40 border-2 border-pink-400/20 rounded-xl py-3 px-4 text-gray-100 placeholder-gray-500 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/30 transition-all"
-                    placeholder="contact@clinique.com"
-                    required
-                  />
-                </div>
-              </div>
+            <div className="split-form-group">
+              <label className="split-form-label">
+                <FiBriefcase className="icon" />
+                Specialty
+              </label>
+              <select
+                value={specialty}
+                onChange={(e) => setSpecialty(e.target.value)}
+                className="split-form-input"
+                required
+              >
+                <option value="">Select your specialty</option>
+                <option value="medecin_generaliste">General Practitioner</option>
+                <option value="cardiologue">Cardiologist</option>
+                <option value="pediatre">Pediatrician</option>
+                <option value="chirurgien">Surgeon</option>
+                <option value="radiologue">Radiologist</option>
+                <option value="infirmier">Nurse</option>
+                <option value="administratif">Administrative Staff</option>
+                <option value="technicien">Medical Technician</option>
+              </select>
+            </div>
 
-              <div>
-                <label className="text-sm font-medium text-pink-300">Mot de passe</label>
-                <div className="mt-1 group relative">
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-black/40 border-2 border-pink-400/20 rounded-xl py-3 px-4 text-gray-100 placeholder-gray-500 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/30 transition-all"
-                    placeholder="••••••••"
-                    required
-                    minLength="6"
-                  />
-                </div>
-              </div>
+            <div className="split-form-group">
+              <label className="split-form-label">
+                <FiMail className="icon" />
+                Professional Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="split-form-input"
+                placeholder="your.email@clinique.com"
+                required
+              />
+            </div>
+
+            <div className="split-form-group">
+              <label className="split-form-label">
+                <FiLock className="icon" />
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="split-form-input"
+                placeholder="Minimum 8 characters"
+                required
+                minLength="6"
+              />
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full h-12 bg-gradient-to-r from-pink-500 to-blue-600 hover:from-pink-400 hover:to-blue-500 rounded-xl font-bold text-gray-100 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="split-submit-button"
             >
-              {isLoading ? 'Création...' : 'Créer un Compte'}
+              <FiUser className="button-icon" />
+              <span>{isLoading ? 'Creating account...' : 'Create account'}</span>
+              <FiArrowRight className="arrow-icon" />
             </button>
           </form>
 
-          <p className="text-center text-gray-400">
-            Déjà inscrit ?{' '}
-            <a 
-              href="/login" 
-              className="text-pink-400 hover:text-pink-300 font-medium transition-colors"
-            >
-              Se connecter
-            </a>
-          </p>
+          {/* Lien de connexion */}
+          <div className="split-auth-footer">
+            <p>
+              Already have an account?{' '}
+              <Link to="/login" className="split-auth-link">
+                Sign in here
+              </Link>
+            </p>
+          </div>
+
+          {/* Features list */}
+          <div className="split-features">
+            <div className="split-feature-item">
+              <FiAward className="feature-icon" />
+              <span>Professional Certification</span>
+            </div>
+            <div className="split-feature-item">
+              <span>Advanced Medical Tools</span>
+            </div>
+            <div className="split-feature-item">
+              <FiShield className="feature-icon" />
+              <span>HIPAA Compliant</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Côté droit - Image */}
+      <div className="split-image-side">
+        <div 
+          className="split-image-container"
+          style={{ backgroundImage: `url(${medicalImage})` }}
+        >
+          <div className="split-image-overlay">
+            <div className="split-image-content">
+              <h3>Join Medical Excellence</h3>
+              <p>Become part of our innovative healthcare community</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
