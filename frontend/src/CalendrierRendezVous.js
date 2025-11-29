@@ -4,65 +4,51 @@ import axios from "axios";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import frLocale from "@fullcalendar/core/locales/fr";
+// ❌ SUPPRIMER cette ligne :
+// import frLocale from "@fullcalendar/core/locales/fr";
 
 function CalendrierRendezVous({ onDateSelect, refresh }) {
   const [events, setEvents] = useState([]);
-  const token = localStorage.getItem("authToken");
 
   useEffect(() => {
-    const fetchAppointments = async () => {
-      if (!token) {
-        console.warn("Pas de token => pas de chargement des RDV");
-        return;
-      }
+    axios
+      .get("http://localhost:5000/api/appointments")
+      .then((res) => {
+        const formatted = (res.data || []).map((app) => {
+          const patientName =
+            app.patient && app.patient.name
+              ? app.patient.name
+              : "Patient inconnu";
 
-      try {
-        const res = await axios.get("http://localhost:5000/api/appointments", {
-          headers: { Authorization: `Bearer ${token}` },
+          const medecinName =
+            app.medecin && app.medecin.name
+              ? app.medecin.name
+              : "Médecin inconnu";
+
+          return {
+            id: app._id,
+            title: `${patientName} avec Dr. ${medecinName}`,
+            date: app.date,
+          };
         });
 
-        const data = Array.isArray(res.data) ? res.data : [];
-
-        const formatted = data
-          // on enlève les rdv complètement foireux
-          .filter((app) => app && app.date)
-          .map((app) => {
-            const patientName =
-              app.patient && app.patient.name
-                ? app.patient.name
-                : "Patient inconnu";
-
-            const medecinName =
-              app.medecin && app.medecin.name
-                ? app.medecin.name
-                : "Médecin inconnu";
-
-            return {
-              id: app._id,
-              title: `${patientName} avec Dr. ${medecinName}`,
-              date: app.date,
-            };
-          });
-
         setEvents(formatted);
-      } catch (err) {
-        console.error("Erreur chargement RDV pour le calendrier :", err);
-      }
-    };
-
-    fetchAppointments();
-  }, [token, refresh]);
+      })
+      .catch((err) => {
+        console.error("Erreur chargement RDV calendrier :", err);
+      });
+  }, [refresh]);
 
   return (
     <FullCalendar
       plugins={[dayGridPlugin, interactionPlugin]}
       initialView="dayGridMonth"
-      locale={frLocale}
+      /** ✅ on met juste la locale en string */
+      locale="fr"
       selectable={true}
       events={events}
       height="600px"
-      dateClick={(info) => onDateSelect && onDateSelect(info.date)}
+      dateClick={(info) => onDateSelect(info.date)}
     />
   );
 }
