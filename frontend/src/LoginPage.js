@@ -1,6 +1,7 @@
 import axios from 'axios';
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+// eslint-disable-next-line no-unused-vars
 import { FiLogIn, FiMail, FiLock, FiArrowRight, FiShield, FiHeart, FiCalendar, FiUsers } from 'react-icons/fi';
 
 // Import des images
@@ -14,36 +15,49 @@ function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
+  // extrait de LoginPage.js
 
-    try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
-  email,
-  password
-});
+// LoginPage.js (seulement la fonction handleLogin à remplacer)
+const handleLogin = async (e) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setError('');
 
-// ⬅️ on stocke aussi le rôle & nom
-localStorage.setItem('authToken', response.data.token);
-localStorage.setItem('userRole', response.data.user.role);
-localStorage.setItem('userName', response.data.user.name);
+  try {
+    const res = await axios.post('http://localhost:5000/api/auth/login', {
+      email,
+      password,
+    });
 
-const role = response.data.user.role;
+    const { token, user } = res.data;
 
-if (role === "admin" || role === "medecin" || role === "secretaire") {
-    navigate("/home");  // interface staff
-} else {
-    navigate("/homePatient");  // interface patient
-}
-      
-    } catch (err) {
-      setError(err.response?.data?.message || 'Erreur de connexion au serveur');
-    } finally {
-      setIsLoading(false);
+    // 🔐 On garde le token + le rôle en local
+    localStorage.setItem('authToken', token);
+    localStorage.setItem('userRole', user.role);
+
+    // 🔀 Redirection selon le rôle
+    if (user.role === 'admin') {
+      navigate('/dashboard');
+    } else if (user.role === 'medecin') {
+      navigate('/medecin/home');
+    } else if (user.role === 'secretaire') {
+      navigate('/secretaire/home');
+    } else if (user.role === 'patient') {
+      navigate('/patient/home');
+    } else {
+      // fallback au cas où
+      navigate('/');
     }
-  };
+
+  } catch (err) {
+    const serverError = err.response?.data?.message;
+    setError(serverError || "Identifiants invalides");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
 
   return (
     <div className="split-auth-page">

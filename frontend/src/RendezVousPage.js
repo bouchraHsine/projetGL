@@ -8,7 +8,7 @@ import {
   FiLogOut,
   FiChevronLeft,
   FiChevronRight,
-  FiMenu
+  FiMenu,
 } from "react-icons/fi";
 
 import CalendrierRendezVous from "./CalendrierRendezVous";
@@ -32,8 +32,10 @@ function RendezVousPage() {
 
   return (
     <div className="admin-layout">
-      {/* ------------------ SIDEBAR ------------------ */}
-      <div className={`sidebar ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
+      {/* SIDEBAR */}
+      <div
+        className={`sidebar ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}
+      >
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <img src={logo} alt="NeoHealth Logo" className="logo-img" />
@@ -56,18 +58,12 @@ function RendezVousPage() {
           <div className="nav-section">
             {sidebarOpen && <h3 className="nav-section-title">GÉNÉRAL</h3>}
 
-            <button
-              className="nav-item"
-              onClick={() => navigate("/dashboard")}
-            >
+            <button className="nav-item" onClick={() => navigate("/dashboard")}>
               <FiHome className="nav-icon" />
               {sidebarOpen && <span>Tableau de Bord</span>}
             </button>
 
-            <button
-              className="nav-item"
-              onClick={() => navigate("/patients")}
-            >
+            <button className="nav-item" onClick={() => navigate("/patients")}>
               <FiUsers className="nav-icon" />
               {sidebarOpen && <span>Gestion Patients</span>}
             </button>
@@ -82,7 +78,9 @@ function RendezVousPage() {
           </div>
 
           <div className="nav-section">
-            {sidebarOpen && <h3 className="nav-section-title">ADMINISTRATION</h3>}
+            {sidebarOpen && (
+              <h3 className="nav-section-title">ADMINISTRATION</h3>
+            )}
 
             <button
               className="nav-item"
@@ -100,10 +98,7 @@ function RendezVousPage() {
               {sidebarOpen && <span>Médecins</span>}
             </button>
 
-            <button
-              className="nav-item"
-              onClick={() => navigate("/salles")}
-            >
+            <button className="nav-item" onClick={() => navigate("/salles")}>
               <FiUsers className="nav-icon" />
               {sidebarOpen && <span>Salles & Blocs</span>}
             </button>
@@ -118,10 +113,10 @@ function RendezVousPage() {
         </div>
       </div>
 
-      {/* ------------------ CONTENU PRINCIPAL ------------------ */}
+      {/* CONTENU PRINCIPAL */}
       <div className={`main-content ${sidebarOpen ? "content-shifted" : ""}`}>
         <header className="content-header">
-          <button 
+          <button
             className="mobile-menu-toggle"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
@@ -130,7 +125,8 @@ function RendezVousPage() {
           <div className="header-actions">
             <h1>Gestion des Rendez-vous</h1>
             <p className="header-subtitle">
-              Planification intelligente avec prise en compte des week-ends et jours fériés.
+              Planification intelligente avec prise en compte des week-ends et
+              jours fériés.
             </p>
           </div>
         </header>

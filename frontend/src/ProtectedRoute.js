@@ -1,21 +1,28 @@
-// frontend/src/ProtectedRoute.js
-import React from 'react';
-import { Navigate } from 'react-router-dom';
+// src/ProtectedRoute.js
+import React from "react";
+import { Navigate } from "react-router-dom";
 
-const ProtectedRoute = ({ children, roles }) => {
-  const token = localStorage.getItem('authToken');
-  const role = localStorage.getItem('userRole');
+function ProtectedRoute({ children, roles }) {
+  const token = localStorage.getItem("authToken");
+  const role = localStorage.getItem("userRole");
 
-  if (!token) {
+  // Pas connecté → login
+  if (!token || !role) {
     return <Navigate to="/login" replace />;
   }
 
-  if (roles && roles.length > 0 && !roles.includes(role)) {
-    // Utilisateur connecté mais pas le bon rôle
-    return <Navigate to="/home" replace />;
+  // Si des rôles sont spécifiés et que celui de l'utilisateur n'en fait pas partie
+  if (roles && !roles.includes(role)) {
+    // 🔀 On le redirige vers son espace
+    if (role === "admin") return <Navigate to="/dashboard" replace />;
+    if (role === "medecin") return <Navigate to="/medecin/home" replace />;
+    if (role === "secretaire") return <Navigate to="/secretaire/home" replace />;
+    if (role === "patient") return <Navigate to="/patient/home" replace />;
+
+    return <Navigate to="/login" replace />;
   }
 
   return children;
-};
+}
 
 export default ProtectedRoute;

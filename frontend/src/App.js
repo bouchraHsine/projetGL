@@ -1,62 +1,57 @@
-// frontend/src/App.js
+// src/App.js
 import React from "react";
 import { Routes, Route } from "react-router-dom";
-import axios from "axios";
 
-import DossierPatient from "./DossierPatient";
-import Home from "./Home";
+import HomePage from "./HomePage";
 import LoginPage from "./LoginPage";
 import RegisterPage from "./RegisterPage";
+
 import Dashboard from "./Dashboard";
-import HomePage from "./HomePage";
 import PatientsList from "./PatientsList";
 import RendezVousPage from "./RendezVousPage";
-import ProtectedRoute from "./ProtectedRoute";
+import DossierPatient from "./DossierPatient";
 
+import ProtectedRoute from "./ProtectedRoute";
 import "./App.css";
 
-/* -------------------------------------------
-   🔐 AJOUT DU TOKEN AUTOMATIQUEMENT DANS AXIOS
----------------------------------------------*/
-axios.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
+// Petites pages placeholder pour chaque rôle
+const PatientHome = () => (
+  <div style={{ padding: "2rem" }}>
+    <h1>Espace Patient</h1>
+    <p>Bienvenue sur votre espace patient (en cours de développement).</p>
+  </div>
 );
 
-/* -------------------------------------------
-   📌 APP CONTENT
----------------------------------------------*/
+const MedecinHome = () => (
+  <div style={{ padding: "2rem" }}>
+    <h1>Espace Médecin</h1>
+    <p>Tableau de bord médecin (vous pourrez y ajouter les fonctionnalités).</p>
+  </div>
+);
+
+const SecretaireHome = () => (
+  <div style={{ padding: "2rem" }}>
+    <h1>Espace Secrétaire</h1>
+    <p>Interface de gestion des rendez-vous et patients (à compléter).</p>
+  </div>
+);
+
 function AppContent() {
   return (
     <div className="app-container">
       <Routes>
-        {/* Landing page */}
+        {/* Landing page publique */}
         <Route path="/" element={<HomePage />} />
 
-        {/* Public */}
+        {/* Auth publique */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Espace staff (admin / medecin / secretaire) */}
-        <Route
-          path="/home"
-          element={
-            <ProtectedRoute roles={["admin", "medecin", "secretaire"]}>
-              <Home />
-            </ProtectedRoute>
-          }
-        />
-
+        {/* 🔹 ADMIN UNIQUEMENT */}
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute roles={["admin", "medecin", "secretaire"]}>
+            <ProtectedRoute roles={["admin"]}>
               <Dashboard />
             </ProtectedRoute>
           }
@@ -65,7 +60,7 @@ function AppContent() {
         <Route
           path="/patients"
           element={
-            <ProtectedRoute roles={["admin", "medecin", "secretaire"]}>
+            <ProtectedRoute roles={["admin"]}>
               <PatientsList />
             </ProtectedRoute>
           }
@@ -80,38 +75,74 @@ function AppContent() {
           }
         />
 
-        {/* Modules à venir */}
-        <Route
-          path="/personnel"
-          element={
-            <h2 className="text-xl font-semibold text-blue-700 p-6">
-              👩‍⚕️ Gestion du Personnel (à venir)
-            </h2>
-          }
-        />
-        <Route
-          path="/docteurs"
-          element={
-            <h2 className="text-xl font-semibold text-blue-700 p-6">
-              🩺 Gestion des Docteurs (à venir)
-            </h2>
-          }
-        />
-        <Route
-          path="/salles"
-          element={
-            <h2 className="text-xl font-semibold text-blue-700 p-6">
-              🏥 Gestion des Salles et Blocs (à venir)
-            </h2>
-          }
-        />
-
-        {/* 📅 MODULE RENDEZ-VOUS COMPLET */}
+        {/* 🔹 RENDEZ-VOUS : admin + médecin + secrétaire */}
         <Route
           path="/rendezvous"
           element={
             <ProtectedRoute roles={["admin", "medecin", "secretaire"]}>
               <RendezVousPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 🔹 ESPACE PATIENT */}
+        <Route
+          path="/patient/home"
+          element={
+            <ProtectedRoute roles={["patient"]}>
+              <PatientHome />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 🔹 ESPACE MÉDECIN */}
+        <Route
+          path="/medecin/home"
+          element={
+            <ProtectedRoute roles={["medecin"]}>
+              <MedecinHome />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 🔹 ESPACE SECRÉTAIRE */}
+        <Route
+          path="/secretaire/home"
+          element={
+            <ProtectedRoute roles={["secretaire"]}>
+              <SecretaireHome />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Tu peux garder ou adapter ces routes plus tard */}
+        <Route
+          path="/personnel"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <h2 className="text-xl font-semibold text-blue-700 p-6">
+                👩‍⚕️ Gestion du Personnel (à venir)
+              </h2>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/docteurs"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <h2 className="text-xl font-semibold text-blue-700 p-6">
+                🩺 Gestion des Docteurs (à venir)
+              </h2>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/salles"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <h2 className="text-xl font-semibold text-blue-700 p-6">
+                🏥 Gestion des Salles et Blocs (à venir)
+              </h2>
             </ProtectedRoute>
           }
         />

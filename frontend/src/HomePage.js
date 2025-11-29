@@ -20,6 +20,7 @@ function HomePage() {
   const images = [hero1, hero2, hero3, hero4, hero5];
 
   // 🧭 Fonction pour scroller jusqu’à une section
+  // eslint-disable-next-line no-unused-vars
   const scrollToSection = (ref) => {
     window.scrollTo({
       top: ref.current.offsetTop - 70, // -70 pour ajuster selon la hauteur du header

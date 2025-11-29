@@ -12,11 +12,11 @@ import {
   ArcElement,
   Tooltip,
   Legend,
-  Filler
+  Filler,
 } from "chart.js";
 
 import "./Dashboard.css";
-import "./Home.css";       // layout + sidebar
+import "./Home.css";
 import Sidebar from "./Sidebar";
 
 Chart.register(
@@ -39,10 +39,8 @@ const Dashboard = () => {
   const [recentActivities, setRecentActivities] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const token = localStorage.getItem("authToken");
-
-  // état pour ouvrir/fermer le sidebar
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const token = localStorage.getItem("authToken");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,28 +48,40 @@ const Dashboard = () => {
         setLoading(true);
         const [global, monthly, weekly, medActivity, recent] = await Promise.all([
           axios.get("http://localhost:5000/api/dashboard/advanced/global-stats", {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get("http://localhost:5000/api/dashboard/advanced/patients-per-month", {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
+          axios.get(
+            "http://localhost:5000/api/dashboard/advanced/patients-per-month",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          ),
           axios.get("http://localhost:5000/api/dashboard/advanced/rdv-week", {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get("http://localhost:5000/api/dashboard/advanced/medecins-activity", {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          axios.get("http://localhost:5000/api/dashboard/advanced/recent-activities", {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
+          axios.get(
+            "http://localhost:5000/api/dashboard/advanced/medecins-activity",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          ),
+          axios.get(
+            "http://localhost:5000/api/dashboard/advanced/recent-activities",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          ),
         ]);
 
-        setGlobalStats(global.data);
-        setPatientsPerMonth(monthly.data);
-        setRdvWeek(weekly.data);
-        setMedecinsActivity(medActivity.data);
-        setRecentActivities(recent.data);
-
+        setGlobalStats(global.data || {});
+        setPatientsPerMonth(Array.isArray(monthly.data) ? monthly.data : []);
+        setRdvWeek(Array.isArray(weekly.data) ? weekly.data : []);
+        setMedecinsActivity(
+          Array.isArray(medActivity.data) ? medActivity.data : []
+        );
+        setRecentActivities(
+          Array.isArray(recent.data) ? recent.data : []
+        );
       } catch (err) {
         console.error("Erreur dashboard avancé:", err);
       } finally {
@@ -79,7 +89,9 @@ const Dashboard = () => {
       }
     };
 
-    fetchData();
+    if (token) {
+      fetchData();
+    }
   }, [token]);
 
   if (loading) {
@@ -96,16 +108,50 @@ const Dashboard = () => {
     );
   }
 
+  // 🔐 Sécuriser les données pour les graphiques
+
+  // Patients / mois → toujours un tableau de 12 valeurs
+  const monthlyPatientsData = Array.isArray(patientsPerMonth)
+    ? [...patientsPerMonth]
+    : [];
+  while (monthlyPatientsData.length < 12) {
+    monthlyPatientsData.push(0);
+  }
+
+  // RDV par jour (Lun → Dim) → tableau de 7 valeurs
+  const rdvWeekData = Array.isArray(rdvWeek) ? [...rdvWeek] : [];
+  while (rdvWeekData.length < 7) {
+    rdvWeekData.push(0);
+  }
+
+  // Activité médecins : filtrer les entrées nulles/incomplètes
+  const safeMedecins = Array.isArray(medecinsActivity)
+    ? medecinsActivity.filter((m) => m && m.name)
+    : [];
+
+  const medecinsBarData = {
+    labels: safeMedecins.map((m) => m.name),
+    datasets: [
+      {
+        label: "Consultations",
+        data: safeMedecins.map((m) => m.totalConsultations || 0),
+        backgroundColor: "rgba(139, 92, 246, 0.8)",
+        borderRadius: 6,
+        borderSkipped: false,
+      },
+    ],
+  };
+
   return (
     <div className="admin-layout">
-      {/* 🔹 Sidebar réutilisable */}
+      {/* Sidebar */}
       <Sidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
         active="dashboard"
       />
 
-      {/* 🔹 Contenu principal qui se décale selon l’état du sidebar */}
+      {/* Contenu */}
       <div className={`main-content ${sidebarOpen ? "content-shifted" : ""}`}>
         <div className="medical-dashboard">
           {/* HEADER */}
@@ -145,7 +191,9 @@ const Dashboard = () => {
                 <div className="kpi-trend positive">+12.5%</div>
               </div>
               <div className="kpi-content">
-                <div className="kpi-value">{globalStats.totalPatients ?? 0}</div>
+                <div className="kpi-value">
+                  {globalStats.totalPatients ?? 0}
+                </div>
                 <div className="kpi-label">Patients enregistrés</div>
               </div>
               <div className="kpi-footer">
@@ -163,7 +211,9 @@ const Dashboard = () => {
                 <div className="kpi-trend neutral">±0%</div>
               </div>
               <div className="kpi-content">
-                <div className="kpi-value">{globalStats.totalMedecins ?? 0}</div>
+                <div className="kpi-value">
+                  {globalStats.totalMedecins ?? 0}
+                </div>
                 <div className="kpi-label">Médecins actifs</div>
               </div>
               <div className="kpi-footer">
@@ -184,7 +234,9 @@ const Dashboard = () => {
                 <div className="kpi-trend positive">+8.2%</div>
               </div>
               <div className="kpi-content">
-                <div className="kpi-value">{globalStats.appointmentsToday ?? 0}</div>
+                <div className="kpi-value">
+                  {globalStats.appointmentsToday ?? 0}
+                </div>
                 <div className="kpi-label">Rendez-vous aujourd'hui</div>
               </div>
               <div className="kpi-footer">
@@ -205,7 +257,9 @@ const Dashboard = () => {
                 <div className="kpi-trend positive">+3.1%</div>
               </div>
               <div className="kpi-content">
-                <div className="kpi-value">{globalStats.totalSecretaires ?? 0}</div>
+                <div className="kpi-value">
+                  {globalStats.totalSecretaires ?? 0}
+                </div>
                 <div className="kpi-label">Personnel administratif</div>
               </div>
               <div className="kpi-footer">
@@ -214,11 +268,11 @@ const Dashboard = () => {
             </div>
           </section>
 
-          {/* MAIN DASHBOARD GRID */}
+          {/* MAIN GRID */}
           <div className="dashboard-grid">
-            {/* LEFT COLUMN - ANALYTICS */}
+            {/* LEFT COLUMN */}
             <div className="analytics-column">
-              {/* Patients Growth Chart */}
+              {/* Évolution Patients */}
               <div className="analytics-card">
                 <div className="card-header">
                   <h3>Évolution des Admissions Patients</h3>
@@ -248,7 +302,7 @@ const Dashboard = () => {
                       datasets: [
                         {
                           label: "Nouveaux patients",
-                          data: patientsPerMonth,
+                          data: monthlyPatientsData,
                           borderColor: "#2563eb",
                           backgroundColor: "rgba(37, 99, 235, 0.1)",
                           borderWidth: 3,
@@ -283,47 +337,29 @@ const Dashboard = () => {
                             color: "rgba(226, 232, 240, 0.5)",
                             drawBorder: false,
                           },
-                          ticks: {
-                            color: "#64748b",
-                          },
+                          ticks: { color: "#64748b" },
                         },
                         x: {
                           grid: { display: false },
-                          ticks: {
-                            color: "#64748b",
-                          },
+                          ticks: { color: "#64748b" },
                         },
                       },
-                      interaction: {
-                        intersect: false,
-                        mode: "index",
-                      },
+                      interaction: { intersect: false, mode: "index" },
                     }}
                   />
                 </div>
               </div>
 
-              {/* Doctors Performance */}
+              {/* Performance des Médecins */}
               <div className="analytics-card">
                 <div className="card-header">
                   <h3>Performance des Médecins</h3>
                   <div className="card-subtitle">Consultations réalisées</div>
                 </div>
                 <div className="chart-wrapper">
-                  {medecinsActivity.length > 0 ? (
+                  {safeMedecins.length > 0 ? (
                     <Bar
-                      data={{
-                        labels: medecinsActivity.map((m) => m.name),
-                        datasets: [
-                          {
-                            label: "Consultations",
-                            data: medecinsActivity.map((m) => m.totalConsultations),
-                            backgroundColor: "rgba(139, 92, 246, 0.8)",
-                            borderRadius: 6,
-                            borderSkipped: false,
-                          },
-                        ],
-                      }}
+                      data={medecinsBarData}
                       options={{
                         responsive: true,
                         maintainAspectRatio: false,
@@ -342,9 +378,7 @@ const Dashboard = () => {
                               color: "rgba(226, 232, 240, 0.5)",
                               drawBorder: false,
                             },
-                            ticks: {
-                              color: "#64748b",
-                            },
+                            ticks: { color: "#64748b" },
                           },
                           x: {
                             grid: { display: false },
@@ -366,9 +400,9 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* RIGHT COLUMN - ACTIVITIES */}
+            {/* RIGHT COLUMN */}
             <div className="activities-column">
-              {/* Weekly Overview */}
+              {/* Activité Hebdomadaire */}
               <div className="analytics-card">
                 <div className="card-header">
                   <h3>Activité Hebdomadaire</h3>
@@ -385,7 +419,7 @@ const Dashboard = () => {
                           labels: ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
                           datasets: [
                             {
-                              data: rdvWeek,
+                              data: rdvWeekData,
                               backgroundColor: "rgba(16, 185, 129, 0.8)",
                               borderRadius: 4,
                             },
@@ -425,10 +459,7 @@ const Dashboard = () => {
                           plugins: {
                             legend: {
                               position: "bottom",
-                              labels: {
-                                padding: 15,
-                                usePointStyle: true,
-                              },
+                              labels: { padding: 15, usePointStyle: true },
                             },
                           },
                           cutout: "65%",
@@ -439,7 +470,7 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Recent Patient Activity */}
+              {/* Activité Patients Récente */}
               <div className="analytics-card">
                 <div className="card-header">
                   <h3>Activité Patients Récente</h3>
@@ -451,7 +482,9 @@ const Dashboard = () => {
                       <div key={patient._id} className="activity-item">
                         <div className="activity-indicator"></div>
                         <div className="activity-avatar">
-                          {patient.name?.charAt(0).toUpperCase() || "P"}
+                          {patient.name
+                            ? patient.name.charAt(0).toUpperCase()
+                            : "P"}
                         </div>
                         <div className="activity-content">
                           <div className="activity-title">
@@ -462,10 +495,15 @@ const Dashboard = () => {
                           </div>
                         </div>
                         <div className="activity-time">
-                          {new Date(patient.updatedAt).toLocaleTimeString("fr-FR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {patient.updatedAt
+                            ? new Date(patient.updatedAt).toLocaleTimeString(
+                                "fr-FR",
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )
+                            : "--:--"}
                         </div>
                       </div>
                     ))
@@ -478,7 +516,7 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* 🔻 Partie Alertes supprimée comme demandé */}
+              {/* Partie alertes supprimée comme demandé */}
             </div>
           </div>
         </div>

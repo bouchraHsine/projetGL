@@ -1,9 +1,9 @@
-// frontend/src/RegisterPage.js
 import axios from 'axios';
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FiUser, FiMail, FiLock, FiArrowRight, FiShield } from 'react-icons/fi';
 
+// Import des images
 import logo from './assets/neohealth-logo.jpg';
 import medicalImage from './assets/hero2.jpg';
 
@@ -21,22 +21,15 @@ function RegisterPage() {
     setError('');
 
     try {
-      // 🚨 Inscription patient UNIQUEMENT
       const response = await axios.post(
         'http://localhost:5000/api/auth/register',
-        { 
-          name: fullName, 
-          email, 
-          password,
-          role: "patient" // forcé côté backend aussi
-        }
+        { name: fullName, email, password }      // 👈 rôle = patient côté backend
       );
 
-      // Pas besoin de token ici (patient simple), mais si tu veux :
       localStorage.setItem('authToken', response.data.token);
 
-      // Redirection vers interface patient
-      navigate('/homePatient');
+      // Redirection vers l'interface PATIENT
+      navigate('/patient/home');
 
     } catch (err) {
       const serverError = err.response?.data?.message;
@@ -48,24 +41,22 @@ function RegisterPage() {
 
   return (
     <div className="split-auth-page">
-
-      {/* Côté gauche */}
+      {/* Côté gauche - Formulaire */}
       <div className="split-form-side">
         <div className="split-form-container">
-
           {/* Logo */}
           <div className="split-logo">
             <img src={logo} alt="NeoHealth Logo" className="split-logo-img" />
             <h1>Clinique NeoHealth</h1>
           </div>
 
-          {/* Titre */}
+          {/* En-tête */}
           <div className="split-header">
-            <h2>Create Your Account</h2>
-            <p>Patient Registration</p>
+            <h2>Créer un compte patient</h2>
+            <p>Accédez à vos rendez-vous et à votre dossier médical en ligne.</p>
           </div>
 
-          {/* Erreur */}
+          {/* Message d'erreur */}
           {error && (
             <div className="split-error-message">
               <FiShield className="error-icon" />
@@ -75,18 +66,17 @@ function RegisterPage() {
 
           {/* Formulaire */}
           <form onSubmit={handleRegister} className="split-form">
-
             <div className="split-form-group">
               <label className="split-form-label">
                 <FiUser className="icon" />
-                Full Name
+                Nom complet
               </label>
               <input
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 className="split-form-input"
-                placeholder="Ex: Sarah Johnson"
+                placeholder="Ex: Hajar Elibrahimi"
                 required
               />
             </div>
@@ -101,7 +91,7 @@ function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="split-form-input"
-                placeholder="example@mail.com"
+                placeholder="vous@example.com"
                 required
               />
             </div>
@@ -109,14 +99,14 @@ function RegisterPage() {
             <div className="split-form-group">
               <label className="split-form-label">
                 <FiLock className="icon" />
-                Password
+                Mot de passe
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="split-form-input"
-                placeholder="Minimum 6 characters"
+                placeholder="Minimum 6 caractères"
                 required
                 minLength="6"
               />
@@ -128,39 +118,37 @@ function RegisterPage() {
               className="split-submit-button"
             >
               <FiUser className="button-icon" />
-              <span>{isLoading ? 'Creating account...' : 'Create account'}</span>
+              <span>{isLoading ? 'Création du compte...' : 'Créer mon compte patient'}</span>
               <FiArrowRight className="arrow-icon" />
             </button>
           </form>
 
-          {/* Lien login */}
+          {/* Lien de connexion */}
           <div className="split-auth-footer">
             <p>
-              Already have an account?{' '}
+              Vous avez déjà un compte ?{' '}
               <Link to="/login" className="split-auth-link">
-                Sign in here
+                Se connecter
               </Link>
             </p>
           </div>
-
         </div>
       </div>
 
-      {/* Côté image */}
+      {/* Côté droit - Image */}
       <div className="split-image-side">
-        <div
+        <div 
           className="split-image-container"
           style={{ backgroundImage: `url(${medicalImage})` }}
         >
           <div className="split-image-overlay">
             <div className="split-image-content">
-              <h3>Welcome to NeoHealth</h3>
-              <p>Your secure medical space</p>
+              <h3>Espace patient sécurisé</h3>
+              <p>Consultez vos rendez-vous, ordonnances et résultats en toute sécurité.</p>
             </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 }

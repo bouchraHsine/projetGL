@@ -12,11 +12,15 @@ const authMiddleware = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // On garde ce qui nous intéresse
+
+    // ✅ On garde les infos importantes, avec userId bien nommé
     req.user = {
-      id: decoded.userId,
-      role: decoded.role
+      userId: decoded.userId,
+      role: decoded.role,
+      name: decoded.name,
+      email: decoded.email,
     };
+
     next();
   } catch (error) {
     console.error('Erreur JWT:', error);

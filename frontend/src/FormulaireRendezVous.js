@@ -1,7 +1,15 @@
+// src/FormulaireRendezVous.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { FiUser, FiClock, FiCalendar, FiFileText, FiPlus } from "react-icons/fi";
+import {
+  FiUser,
+  FiClock,
+  FiCalendar,
+  FiFileText,
+  FiPlus,
+} from "react-icons/fi";
 import "./RV.css";
+
 function FormulaireRendezVous({ selectedDate, onSuccess }) {
   const [patients, setPatients] = useState([]);
   const [medecins, setMedecins] = useState([]);
@@ -12,17 +20,22 @@ function FormulaireRendezVous({ selectedDate, onSuccess }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Charger patients + médecins
+  const token = localStorage.getItem("authToken");
+
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
         const [pRes, mRes] = await Promise.all([
-          axios.get("http://localhost:5000/api/patients"),
-          axios.get("http://localhost:5000/api/auth/users?role=medecin"),
+          axios.get("http://localhost:5000/api/patients", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get("http://localhost:5000/api/auth/users?role=medecin", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ]);
-        setPatients(pRes.data);
-        setMedecins(mRes.data);
+        setPatients(pRes.data || []);
+        setMedecins(mRes.data || []);
       } catch (err) {
         console.error("Erreur chargement données RDV:", err.response?.data || err);
         setError("Erreur lors du chargement des données.");
@@ -30,8 +43,10 @@ function FormulaireRendezVous({ selectedDate, onSuccess }) {
         setLoading(false);
       }
     };
-    loadData();
-  }, []);
+    if (token) {
+      loadData();
+    }
+  }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,22 +65,27 @@ function FormulaireRendezVous({ selectedDate, onSuccess }) {
       return;
     }
 
-    // Construire la date finale (date du calendrier + heure choisie)
     const finalDate = new Date(selectedDate);
     const [h, m] = heure.split(":");
     finalDate.setHours(h, m, 0, 0);
 
     try {
       setLoading(true);
-      const res = await axios.post("http://localhost:5000/api/appointments", {
-        patient,
-        medecin,
-        date: finalDate,
-        motif,
-      });
+      const res = await axios.post(
+        "http://localhost:5000/api/appointments",
+        {
+          patient,
+          medecin,
+          date: finalDate,
+          motif,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       console.log("RDV créé:", res.data);
-      // Reset formulaire
+
       setHeure("");
       setMotif("");
       setPatient("");
@@ -94,6 +114,7 @@ function FormulaireRendezVous({ selectedDate, onSuccess }) {
         )}
 
         <div className="form-grid">
+          {/* PATIENT */}
           <div className="form-group">
             <label className="form-label">
               <FiUser className="label-icon" />
@@ -107,14 +128,17 @@ function FormulaireRendezVous({ selectedDate, onSuccess }) {
               disabled={loading}
             >
               <option value="">Sélectionner un patient</option>
-              {patients.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {p.name} (Dossier #{p.dossier})
-                </option>
-              ))}
+              {(patients || [])
+                .filter((p) => p && p._id && p.name)
+                .map((p) => (
+                  <option key={p._id} value={p._id}>
+                    {p.name} {p.dossier ? `(Dossier #${p.dossier})` : ""}
+                  </option>
+                ))}
             </select>
           </div>
 
+          {/* MÉDECIN */}
           <div className="form-group">
             <label className="form-label">
               <FiUser className="label-icon" />
@@ -128,14 +152,17 @@ function FormulaireRendezVous({ selectedDate, onSuccess }) {
               disabled={loading}
             >
               <option value="">Sélectionner un médecin</option>
-              {medecins.map((m) => (
-                <option key={m._id} value={m._id}>
-                  Dr {m.name}
-                </option>
-              ))}
+              {(medecins || [])
+                .filter((m) => m && m._id && m.name)
+                .map((m) => (
+                  <option key={m._id} value={m._id}>
+                    {m.name} {m.specialty ? `- ${m.specialty}` : ""}
+                  </option>
+                ))}
             </select>
           </div>
 
+          {/* DATE */}
           <div className="form-group">
             <label className="form-label">
               <FiCalendar className="label-icon" />
@@ -144,15 +171,16 @@ function FormulaireRendezVous({ selectedDate, onSuccess }) {
             <div className="date-display">
               {selectedDate
                 ? selectedDate.toLocaleDateString("fr-FR", {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
                   })
                 : "Aucune date sélectionnée"}
             </div>
           </div>
 
+          {/* HEURE */}
           <div className="form-group">
             <label className="form-label">
               <FiClock className="label-icon" />
@@ -169,6 +197,7 @@ function FormulaireRendezVous({ selectedDate, onSuccess }) {
           </div>
         </div>
 
+        {/* MOTIF */}
         <div className="form-group full-width">
           <label className="form-label">
             <FiFileText className="label-icon" />
@@ -184,13 +213,13 @@ function FormulaireRendezVous({ selectedDate, onSuccess }) {
           />
         </div>
 
-        <button 
-          type="submit" 
-          className={`submit-btn ${loading ? 'loading' : ''}`}
+        <button
+          type="submit"
+          className={`submit-btn ${loading ? "loading" : ""}`}
           disabled={loading}
         >
           <FiPlus className="btn-icon" />
-          {loading ? 'Création en cours...' : 'Enregistrer le rendez-vous'}
+          {loading ? "Création en cours..." : "Enregistrer le rendez-vous"}
         </button>
       </form>
     </div>
