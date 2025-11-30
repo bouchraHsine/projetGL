@@ -27,6 +27,8 @@ app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
 });
+// Serve static photos
+app.use("/uploads", express.static("uploads"));
 
 // ============================
 // Connexion MongoDB
@@ -59,6 +61,7 @@ app.use(
   verifyRole(['admin', 'medecin', 'secretaire']),
   patientRoutes
 );
+app.use("/api/doctors", require("./routes/doctorRoutes"));
 app.use(
   '/api/appointments',
   authMiddleware,

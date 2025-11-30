@@ -1,6 +1,6 @@
 // src/App.js
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom"; // Ajouter Navigate ici
 
 import HomePage from "./HomePage";
 import LoginPage from "./LoginPage";
@@ -13,6 +13,10 @@ import DossierPatient from "./DossierPatient";
 
 import ProtectedRoute from "./ProtectedRoute";
 import "./App.css";
+import DoctorsList from "./doctors/DoctorsList";
+import DoctorDetail from "./doctors/DoctorDetail";
+import AddDoctor from "./doctors/AddDoctor";
+import EditDoctor from "./doctors/EditDoctor";
 
 // Petites pages placeholder pour chaque rôle
 const PatientHome = () => (
@@ -126,16 +130,16 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/docteurs"
-          element={
-            <ProtectedRoute roles={["admin"]}>
-              <h2 className="text-xl font-semibold text-blue-700 p-6">
-                🩺 Gestion des Docteurs (à venir)
-              </h2>
-            </ProtectedRoute>
-          }
-        />
+        
+        {/* Routes médecins */}
+        <Route path="/docteurs" element={<DoctorsList />} />
+        <Route path="/docteurs/ajouter" element={<AddDoctor />} />
+        <Route path="/docteurs/:id" element={<DoctorDetail />} />
+        <Route path="/docteurs/:id/edit" element={<EditDoctor />} />
+        
+        {/* fallback: redirect to liste */}
+        <Route path="*" element={<Navigate to="/docteurs" replace />} /> 
+        
         <Route
           path="/salles"
           element={

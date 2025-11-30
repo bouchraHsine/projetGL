@@ -3,6 +3,7 @@ import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AddPatientModal from './AddPatientModal';
+import DoctorsList from './doctors/DoctorsList';
 import EditPatientModal from './EditPatientModal';
 import { FiHome, FiUsers, FiCalendar, FiUserPlus, FiSearch, FiLogOut } from 'react-icons/fi';
 import "./Home.css";
