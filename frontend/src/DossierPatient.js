@@ -1,27 +1,61 @@
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { 
+  FiUser, FiFileText, FiPhone, FiHome, FiCalendar, 
+  FiUpload, FiDownload, FiTrash2, FiArrowLeft,
+  FiPrinter, FiShare2, FiClock, FiEdit, FiMail,
+  FiActivity, FiHeart, FiDroplet, FiThermometer
+} from 'react-icons/fi';
+import Sidebar from './Sidebar';
 
 function DossierPatient() {
   const { patientId } = useParams();
+  const navigate = useNavigate();
   const [patient, setPatient] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [error, setError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState('documents');
+
+  const extractDocuments = (data) => {
+    if (!data) return [];
+    return (
+      data.medicalRecords ||
+      data.documents ||
+      data.dossier ||
+      []
+    );
+  };
 
   useEffect(() => {
     const fetchPatientDetails = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/patients/${patientId}`);
+        setLoading(true);
+        setError(null);
+        const token = localStorage.getItem('authToken');
+        const response = await axios.get(
+          `http://localhost:5000/api/patients/${patientId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
         setPatient(response.data);
-        setDocuments(response.data.medicalRecords || []);
+        setDocuments(extractDocuments(response.data));
       } catch (err) {
-        setError('Erreur lors de la récupération des détails du patient');
         console.error('Erreur:', err);
+        setError(err.response?.data?.message || "Erreur lors de la récupération des détails du patient");
+      } finally {
+        setLoading(false);
       }
     };
-    fetchPatientDetails();
+
+    if (patientId) fetchPatientDetails();
+    else {
+      setError("Aucun patient spécifié");
+      setLoading(false);
+    }
   }, [patientId]);
 
   const handleFileChange = (e) => {
@@ -42,162 +76,417 @@ function DossierPatient() {
     formData.append('document', selectedFile);
 
     try {
+      const token = localStorage.getItem('authToken');
       const response = await axios.post(
         `http://localhost:5000/api/patients/${patientId}/dossier`,
         formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       if (response.data?.document) {
-        setDocuments([...documents, response.data.document]);
-        setSelectedFile(null);
-        setUploadSuccess("Document ajouté avec succès !");
+        setDocuments((prev) => [...prev, response.data.document]);
+      } else if (response.data?.documents || response.data?.medicalRecords) {
+        setDocuments(extractDocuments(response.data));
+      } else if (response.data?.patient) {
+        setDocuments(extractDocuments(response.data.patient));
       }
+
+      setSelectedFile(null);
+      setUploadSuccess("Document ajouté avec succès !");
+      setError(null);
     } catch (err) {
+      console.error(err);
       setError(err.response?.data?.error || "Erreur lors de l'ajout du document");
+      setUploadSuccess(null);
     }
   };
 
-  const handleDeleteDocument = async (docUrl) => {
+  const handleDeleteDocument = async (docUrlOrObj) => {
+    const url = typeof docUrlOrObj === "string" ? docUrlOrObj : docUrlOrObj.url;
+    if (!url) {
+      setError("URL du document invalide.");
+      return;
+    }
+
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) {
       try {
-        await axios.delete(`http://localhost:5000/api/patients/${patientId}/dossier`, { 
-          data: { document: docUrl } 
-        });
-        setDocuments(documents.filter(doc => doc.url !== docUrl));
+        const token = localStorage.getItem('authToken');
+        const response = await axios.delete(
+          `http://localhost:5000/api/patients/${patientId}/dossier`,
+          {
+            data: { document: url },
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (response.data?.documents || response.data?.medicalRecords) {
+          setDocuments(extractDocuments(response.data));
+        } else if (response.data?.patient) {
+          setDocuments(extractDocuments(response.data.patient));
+        } else {
+          setDocuments((prev) =>
+            prev.filter((doc) =>
+              (typeof doc === "string" ? doc : doc.url) !== url
+            )
+          );
+        }
       } catch (err) {
+        console.error(err);
         setError(err.response?.data?.error || 'Erreur lors de la suppression');
       }
     }
   };
 
-  if (!patient) {
-    return <div className="text-center p-4">Chargement...</div>;
+  const getDocUrl = (doc) => {
+    const raw = typeof doc === "string" ? doc : doc.url;
+    if (!raw) return "#";
+    if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+    return `http://localhost:5000${raw.startsWith("/") ? raw : "/" + raw}`;
+  };
+
+  const getDocName = (doc, index) => {
+    if (typeof doc === "string") {
+      const parts = doc.split("/");
+      return parts[parts.length - 1] || `Document ${index + 1}`;
+    }
+    return doc.name || `Document ${index + 1}`;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-900 mx-auto mb-6"></div>
+          <h3 className="text-xl font-bold text-gray-800">Chargement du dossier...</h3>
+        </div>
+      </div>
+    );
   }
 
+  if (error && !patient) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="bg-white shadow-2xl rounded-2xl p-8 max-w-lg text-center">
+          <h3 className="text-2xl font-bold text-red-600 mb-4">Erreur</h3>
+          <p className="text-gray-700 mb-4">{error}</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-6 py-3 bg-blue-900 text-white rounded-xl font-medium hover:bg-blue-800 transition-colors"
+          >
+            <FiArrowLeft className="inline mr-2" />
+            Retour
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!patient) return null;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* En-tête avec photo */}
-        <div className="backdrop-blur-lg bg-white/30 rounded-2xl shadow-xl p-8 border border-white/20">
-          <div className="flex flex-col items-center space-y-4">
-            {patient.photo ? (
-              <img 
-                src={`http://localhost:5000${patient.photo}`} 
-                alt={patient.name}
-                className="w-32 h-32 rounded-full ring-4 ring-white/50 shadow-2xl object-cover"
-              />
-            ) : (
-              <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full ring-4 ring-white/50" />
-            )}
-            <h1 className="text-4xl font-semibold text-purple-800">
-              Dossier Médical
-            </h1>
-            <p className="text-2xl font-semibold text-gray-800">{patient.name}</p>
-            <div className="flex gap-4 text-gray-600">
-              <span className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                </svg>
-                {patient.phone}
-              </span>
-              <span className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 text-purple-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                </svg>
-                {patient.address}
-              </span>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <Sidebar
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        active="patients"
+      />
 
-        {/* Notifications */}
-        {error && (
-          <div className="p-4 bg-red-100/80 backdrop-blur-sm border border-red-200 rounded-xl flex items-center text-red-600">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            {error}
-          </div>
-        )}
-
-        {uploadSuccess && (
-          <div className="p-4 bg-green-100/80 backdrop-blur-sm border border-green-200 rounded-xl flex items-center text-green-600">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {uploadSuccess}
-          </div>
-        )}
-
-        {/* Upload de documents */}
-        <div className="backdrop-blur-lg bg-white/30 p-6 rounded-2xl shadow-xl border border-white/20">
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">Ajouter un document</h2>
-            <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-2xl p-8 cursor-pointer transition-all duration-300 group">
-              <input
-                type="file"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <div className="text-center space-y-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-400 group-hover:text-blue-500 mx-auto transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <p className="text-gray-600 group-hover:text-gray-800">
-                  {selectedFile ? selectedFile.name : 'Glissez-déposez ou cliquez pour sélectionner'}
-                </p>
-              </div>
-            </label>
-            <button
-              onClick={handleUploadDocument}
-              disabled={!selectedFile}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Téléverser le document
-            </button>
-          </div>
-        </div>
-
-        {/* Liste des documents */}
-        <div className="backdrop-blur-lg bg-white/30 p-6 rounded-2xl shadow-xl border border-white/20">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">Documents médicaux</h2>
-          {documents.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              Aucun document disponible
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {documents.map((doc, index) => (
-                <div key={index} className="group flex items-center justify-between p-4 bg-white/50 hover:bg-white/70 rounded-xl transition-all duration-300 hover:-translate-y-1 shadow-sm hover:shadow-md">
-                  <div className="flex items-center space-x-4">
-                    <div className="p-3 bg-blue-100 rounded-lg">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <a
-                      href={doc.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-700 font-medium truncate"
-                    >
-                      {doc.name}
-                    </a>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteDocument(doc.url)}
-                    className="p-2 hover:bg-red-50 rounded-lg text-red-500 hover:text-red-600 transition-colors"
-                    title="Supprimer"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </button>
+      <div className={`transition-all duration-300 min-h-screen ${sidebarOpen ? "ml-72" : "ml-20"}`}>
+        {/* Header */}
+        <header className="bg-gradient-to-r from-blue-800 via-royalblue-900 to-blue-900 text-white p-8 -mt-8 -mx-8 mb-8 shadow-2xl border-b-4 border-gold-500">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => navigate(-1)}
+                  className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm border border-white/30 hover:bg-white/30 transition-colors"
+                >
+                  <FiArrowLeft className="text-2xl text-white" />
+                </button>
+                <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm border border-white/30">
+                  <FiUser className="text-2xl text-white" />
                 </div>
-              ))}
+                <div>
+                  <h1 className="text-3xl font-bold text-white">Dossier Médical</h1>
+                  <p className="text-blue-100 mt-2 text-lg">
+                    Patient: {patient.name} • Dossier #{patient.dossier || 'N/A'}
+                  </p>
+                </div>
+              </div>
             </div>
-          )}
+            <div className="flex items-center space-x-4">
+              <button className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-4 py-3 rounded-xl border border-white/30 hover:bg-white/30 transition-colors">
+                <FiPrinter className="text-xl" />
+                <span>Imprimer</span>
+              </button>
+              <button className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-4 py-3 rounded-xl border border-white/30 hover:bg-white/30 transition-colors">
+                <FiShare2 className="text-xl" />
+                <span>Partager</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Colonne gauche - Informations patient */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* En-tête patient */}
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+                <div className="flex items-start space-x-8">
+                  {patient.photo ? (
+                    <img
+                      src={`http://localhost:5000${patient.photo}`}
+                      alt={patient.name}
+                      className="w-40 h-40 rounded-2xl object-cover border-4 border-white shadow-2xl"
+                    />
+                  ) : (
+                    <div className="w-40 h-40 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-6xl font-bold text-blue-900 border-4 border-white shadow-2xl">
+                      {patient.name?.charAt(0)}
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-900">{patient.name}</h2>
+                        <p className="text-gray-600 mt-1">Dossier Médical Complet</p>
+                      </div>
+                      <button className="flex items-center space-x-2 px-4 py-2 bg-blue-900 text-white rounded-xl font-medium hover:bg-blue-800 transition-colors">
+                        <FiEdit className="text-lg" />
+                        <span>Modifier</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6 mt-8">
+                      <div className="space-y-3">
+                        <div className="flex items-center text-gray-700">
+                          <FiPhone className="mr-3 text-blue-900" />
+                          <span className="font-medium">{patient.phone || 'Non renseigné'}</span>
+                        </div>
+                        <div className="flex items-center text-gray-700">
+                          <FiMail className="mr-3 text-blue-900" />
+                          <span className="font-medium">{patient.email || 'Non renseigné'}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center text-gray-700">
+                          <FiHome className="mr-3 text-blue-900" />
+                          <span className="font-medium">{patient.address || 'Non renseigné'}</span>
+                        </div>
+                        <div className="flex items-center text-gray-700">
+                          <FiCalendar className="mr-3 text-blue-900" />
+                          <span className="font-medium">
+                            {patient.dateNaissance 
+                              ? new Date(patient.dateNaissance).toLocaleDateString('fr-FR')
+                              : 'Date de naissance non renseignée'
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Onglets */}
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                <div className="border-b border-gray-200">
+                  <div className="flex">
+                    <button
+                      onClick={() => setActiveTab('documents')}
+                      className={`px-8 py-4 font-medium text-lg border-b-2 transition-all ${
+                        activeTab === 'documents'
+                          ? 'border-blue-900 text-blue-900'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Documents
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('consultations')}
+                      className={`px-8 py-4 font-medium text-lg border-b-2 transition-all ${
+                        activeTab === 'consultations'
+                          ? 'border-blue-900 text-blue-900'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Consultations
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('history')}
+                      className={`px-8 py-4 font-medium text-lg border-b-2 transition-all ${
+                        activeTab === 'history'
+                          ? 'border-blue-900 text-blue-900'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Historique
+                    </button>
+                  </div>
+                </div>
+
+                {/* Contenu des onglets */}
+                <div className="p-8">
+                  {activeTab === 'documents' && (
+                    <div className="space-y-6">
+                      {/* Upload */}
+                      <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-gray-900 flex items-center">
+                          <FiUpload className="mr-3 text-blue-900" />
+                          Ajouter un Document
+                        </h3>
+                        <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 hover:border-blue-900 transition-colors group">
+                          <input
+                            type="file"
+                            onChange={handleFileChange}
+                            className="hidden"
+                            id="file-upload"
+                          />
+                          <label htmlFor="file-upload" className="cursor-pointer block">
+                            <div className="text-center">
+                              <FiUpload className="text-5xl text-gray-400 group-hover:text-blue-900 mx-auto mb-4" />
+                              <p className="text-lg font-medium text-gray-700">
+                                {selectedFile ? selectedFile.name : 'Glissez-déposez ou cliquez pour sélectionner un fichier'}
+                              </p>
+                              <p className="text-gray-500 mt-2">PDF, JPG, PNG, DOC (max 10MB)</p>
+                            </div>
+                          </label>
+                        </div>
+                        <button
+                          onClick={handleUploadDocument}
+                          disabled={!selectedFile}
+                          className="w-full py-4 bg-gradient-to-r from-blue-900 to-blue-800 text-white font-bold rounded-xl hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Téléverser le Document
+                        </button>
+                      </div>
+
+                      {/* Liste documents */}
+                      {documents.length > 0 && (
+                        <div className="space-y-4">
+                          <h3 className="text-xl font-bold text-gray-900 flex items-center justify-between">
+                            <span>Documents ({documents.length})</span>
+                            <span className="text-sm font-normal text-gray-500">Trier par: Date</span>
+                          </h3>
+                          <div className="space-y-3">
+                            {documents.map((doc, index) => (
+                              <div key={index} className="flex items-center justify-between p-4 bg-gray-50 hover:bg-blue-50 rounded-xl transition-colors group">
+                                <div className="flex items-center space-x-4">
+                                  <div className="p-3 bg-blue-100 rounded-lg">
+                                    <FiFileText className="text-xl text-blue-900" />
+                                  </div>
+                                  <div>
+                                    <a
+                                      href={getDocUrl(doc)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="font-medium text-blue-900 hover:text-blue-700 flex items-center"
+                                    >
+                                      {getDocName(doc, index)}
+                                      <FiDownload className="ml-2 text-sm" />
+                                    </a>
+                                    <p className="text-sm text-gray-500">
+                                      Ajouté le {new Date().toLocaleDateString('fr-FR')}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => handleDeleteDocument(doc)}
+                                  className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                >
+                                  <FiTrash2 className="text-xl" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Colonne droite - Stats et infos */}
+            <div className="space-y-8">
+              {/* Stats médicales */}
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-6">Données Médicales</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-red-100 rounded-lg">
+                        <FiHeart className="text-red-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Rythme cardiaque</p>
+                        <p className="font-bold text-gray-900">72 bpm</p>
+                      </div>
+                    </div>
+                    <span className="text-green-600 font-medium">Normal</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <FiThermometer className="text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Température</p>
+                        <p className="font-bold text-gray-900">36.8°C</p>
+                      </div>
+                    </div>
+                    <span className="text-green-600 font-medium">Normal</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <FiActivity className="text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Pression artérielle</p>
+                        <p className="font-bold text-gray-900">120/80</p>
+                      </div>
+                    </div>
+                    <span className="text-green-600 font-medium">Normal</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dernières consultations */}
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-6">Dernières Consultations</h3>
+                <div className="space-y-4">
+                  <div className="p-4 bg-blue-50 rounded-xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-gray-900">Dr. Martin</span>
+                      <span className="text-sm text-gray-500">15 Nov 2024</span>
+                    </div>
+                    <p className="text-gray-600 text-sm">Consultation de contrôle</p>
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-sm px-3 py-1 bg-green-100 text-green-800 rounded-full">Terminé</span>
+                      <FiDownload className="text-gray-400 hover:text-blue-900 cursor-pointer" />
+                    </div>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-gray-900">Dr. Lefebvre</span>
+                      <span className="text-sm text-gray-500">10 Nov 2024</span>
+                    </div>
+                    <p className="text-gray-600 text-sm">Bilan annuel</p>
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-sm px-3 py-1 bg-green-100 text-green-800 rounded-full">Terminé</span>
+                      <FiDownload className="text-gray-400 hover:text-blue-900 cursor-pointer" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

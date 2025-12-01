@@ -13,6 +13,9 @@ const dashboardAdvanced = require('./routes/dashboardAdvanced');
 const authMiddleware = require('./middleware/authMiddleware');
 const verifyRole = require('./middleware/verifyRole');
 const appointmentRoutes = require('./routes/appointmentRoutes');
+const doctorRoutes = require('./routes/doctorRoutes');
+const staffRoutes = require("./routes/staffRoutes");
+const roomRoutes = require("./routes/roomRoutes");
 const app = express();
 const port = 5000;
 
@@ -61,6 +64,14 @@ app.use(
   verifyRole(['admin', 'medecin', 'secretaire']),
   patientRoutes
 );
+app.use("/api/staff", staffRoutes);
+app.use(
+  '/api/doctors',
+  authMiddleware,
+  verifyRole(['admin']),
+  doctorRoutes
+);
+app.use("/api/salles", roomRoutes);
 app.use("/api/doctors", require("./routes/doctorRoutes"));
 app.use(
   '/api/appointments',

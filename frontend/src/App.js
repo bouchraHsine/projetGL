@@ -1,57 +1,64 @@
 // src/App.js
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom"; // Ajouter Navigate ici
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import HomePage from "./HomePage";
 import LoginPage from "./LoginPage";
 import RegisterPage from "./RegisterPage";
 
 import Dashboard from "./Dashboard";
-import PatientsList from "./PatientsList";
+import Home from "./Home"; // Gestion des patients (admin)
 import RendezVousPage from "./RendezVousPage";
 import DossierPatient from "./DossierPatient";
-
+import StaffPage from "./staff/StaffPage";
 import ProtectedRoute from "./ProtectedRoute";
 import "./App.css";
+
 import DoctorsList from "./doctors/DoctorsList";
 import DoctorDetail from "./doctors/DoctorDetail";
 import AddDoctor from "./doctors/AddDoctor";
 import EditDoctor from "./doctors/EditDoctor";
+import SallesBlocs from "./SallesBlocs";
 
-// Petites pages placeholder pour chaque rôle
+/* ============================
+   Composants pour chaque rôle
+   ============================ */
+
 const PatientHome = () => (
   <div style={{ padding: "2rem" }}>
     <h1>Espace Patient</h1>
-    <p>Bienvenue sur votre espace patient (en cours de développement).</p>
+    <p>Bienvenue sur votre espace patient. (Interface en cours de développement)</p>
   </div>
 );
 
 const MedecinHome = () => (
   <div style={{ padding: "2rem" }}>
     <h1>Espace Médecin</h1>
-    <p>Tableau de bord médecin (vous pourrez y ajouter les fonctionnalités).</p>
+    <p>Tableau de bord médecin. (Fonctionnalités à ajouter plus tard)</p>
   </div>
 );
 
 const SecretaireHome = () => (
   <div style={{ padding: "2rem" }}>
     <h1>Espace Secrétaire</h1>
-    <p>Interface de gestion des rendez-vous et patients (à compléter).</p>
+    <p>Gestion des rendez-vous et des patients. (Interface à compléter)</p>
   </div>
 );
+
+/* ============================
+   Routes principales
+   ============================ */
 
 function AppContent() {
   return (
     <div className="app-container">
       <Routes>
-        {/* Landing page publique */}
+        {/* Public */}
         <Route path="/" element={<HomePage />} />
-
-        {/* Auth publique */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* 🔹 ADMIN UNIQUEMENT */}
+        {/* ADMIN */}
         <Route
           path="/dashboard"
           element={
@@ -65,7 +72,7 @@ function AppContent() {
           path="/patients"
           element={
             <ProtectedRoute roles={["admin"]}>
-              <PatientsList />
+              <Home /> {/* gestion patients avec sidebar */}
             </ProtectedRoute>
           }
         />
@@ -79,7 +86,7 @@ function AppContent() {
           }
         />
 
-        {/* 🔹 RENDEZ-VOUS : admin + médecin + secrétaire */}
+        {/* RDV : admin + medecin + secretaire */}
         <Route
           path="/rendezvous"
           element={
@@ -89,7 +96,7 @@ function AppContent() {
           }
         />
 
-        {/* 🔹 ESPACE PATIENT */}
+        {/* ESPACES PAR RÔLE */}
         <Route
           path="/patient/home"
           element={
@@ -99,7 +106,6 @@ function AppContent() {
           }
         />
 
-        {/* 🔹 ESPACE MÉDECIN */}
         <Route
           path="/medecin/home"
           element={
@@ -109,7 +115,6 @@ function AppContent() {
           }
         />
 
-        {/* 🔹 ESPACE SECRÉTAIRE */}
         <Route
           path="/secretaire/home"
           element={
@@ -119,37 +124,62 @@ function AppContent() {
           }
         />
 
-        {/* Tu peux garder ou adapter ces routes plus tard */}
+        {/* Personnel (admin) */}
         <Route
           path="/personnel"
           element={
             <ProtectedRoute roles={["admin"]}>
-              <h2 className="text-xl font-semibold text-blue-700 p-6">
-                👩‍⚕️ Gestion du Personnel (à venir)
-              </h2>
+              <StaffPage />
             </ProtectedRoute>
           }
         />
-        
-        {/* Routes médecins */}
-        <Route path="/docteurs" element={<DoctorsList />} />
-        <Route path="/docteurs/ajouter" element={<AddDoctor />} />
-        <Route path="/docteurs/:id" element={<DoctorDetail />} />
-        <Route path="/docteurs/:id/edit" element={<EditDoctor />} />
-        
-        {/* fallback: redirect to liste */}
-        <Route path="*" element={<Navigate to="/docteurs" replace />} /> 
-        
+
+        {/* Médecins → ADMIN UNIQUEMENT */}
+        <Route
+          path="/docteurs"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <DoctorsList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/docteurs/ajouter"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AddDoctor />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/docteurs/:id"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <DoctorDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/docteurs/:id/edit"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <EditDoctor />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Salles & Blocs (admin) */}
         <Route
           path="/salles"
           element={
             <ProtectedRoute roles={["admin"]}>
-              <h2 className="text-xl font-semibold text-blue-700 p-6">
-                🏥 Gestion des Salles et Blocs (à venir)
-              </h2>
+              <SallesBlocs />
             </ProtectedRoute>
           }
         />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );

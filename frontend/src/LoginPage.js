@@ -32,8 +32,10 @@ const handleLogin = async (e) => {
     const { token, user } = res.data;
 
     // 🔐 On garde le token + le rôle en local
-    localStorage.setItem('authToken', token);
-    localStorage.setItem('userRole', user.role);
+    localStorage.setItem("authToken", token);
+    localStorage.setItem("userRole", user.role);        // "admin" | "medecin" | "patient" | ...
+    localStorage.setItem("userName", user.name || "");
+    localStorage.setItem("userEmail", user.email || "");
 
     // 🔀 Redirection selon le rôle
     if (user.role === 'admin') {
