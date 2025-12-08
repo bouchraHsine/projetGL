@@ -15,51 +15,50 @@ function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // extrait de LoginPage.js
+  // 🔹 Fonction de login
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
 
-// LoginPage.js (seulement la fonction handleLogin à remplacer)
-const handleLogin = async (e) => {
-  e.preventDefault();
-  setIsLoading(true);
-  setError('');
+    try {
+      const res = await axios.post('http://localhost:5000/api/auth/login', {
+        email,
+        password,
+      });
 
-  try {
-    const res = await axios.post('http://localhost:5000/api/auth/login', {
-      email,
-      password,
-    });
+      const { token, user } = res.data;
 
-    const { token, user } = res.data;
+      // 🔐 Sauvegarde du token et des infos utilisateur
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('userRole', user.role);
+      localStorage.setItem('userName', user.name || '');
+      localStorage.setItem('userEmail', user.email || '');
 
-    // 🔐 On garde le token + le rôle en local
-    localStorage.setItem("authToken", token);
-    localStorage.setItem("userRole", user.role);        // "admin" | "medecin" | "patient" | ...
-    localStorage.setItem("userName", user.name || "");
-    localStorage.setItem("userEmail", user.email || "");
+      // 🔹 Si médecin, on stocke ses infos complètes
+      if (user.role === 'medecin') {
+        localStorage.setItem('medecin', JSON.stringify(user));
+      }
 
-    // 🔀 Redirection selon le rôle
-    if (user.role === 'admin') {
-      navigate('/dashboard');
-    } else if (user.role === 'medecin') {
-      navigate('/medecin/home');
-    } else if (user.role === 'secretaire') {
-      navigate('/secretaire/home');
-    } else if (user.role === 'patient') {
-      navigate('/patient/home');
-    } else {
-      // fallback au cas où
-      navigate('/');
+      // 🔹 Redirections selon rôle
+      const roleRoutes = {
+        medecin: '/medecin/home',
+        admin: '/dashboard',
+        secretaire: '/secretaire/home',
+        patient: '/patient/home',
+      };
+
+      const route = roleRoutes[user.role] || '/';
+      navigate(route);
+
+    } catch (err) {
+      const serverError = err.response?.data?.message;
+      setError(serverError || 'Identifiants invalides');
+      console.error('Erreur login:', err);
+    } finally {
+      setIsLoading(false);
     }
-
-  } catch (err) {
-    const serverError = err.response?.data?.message;
-    setError(serverError || "Identifiants invalides");
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-
+  };
 
   return (
     <div className="split-auth-page">
