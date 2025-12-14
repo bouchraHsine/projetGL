@@ -1,200 +1,250 @@
-// src/EditPatientModal.js
 import React, { useEffect, useState } from "react";
-import {
-  FiUser,
-  FiFileText,
-  FiPhone,
-  FiHome,
-  FiMail,
-  FiCalendar,
-  FiX,
-} from "react-icons/fi";
+import { FiUser, FiFileText, FiPhone, FiHome, FiCalendar, FiX, FiMail, FiLock, FiCheck } from "react-icons/fi";
 
-const EditPatientModal = ({ patient, onClose, onEditPatient }) => {
+const EditPatientModal = ({ patient, onClose, onEditPatient, onUpdatePatient }) => {
   const [formData, setFormData] = useState({
     name: "",
     dossier: "",
     phone: "",
-    address: "",
     email: "",
-    birthday: "",
+    address: "",
+    dateNaissance: "",
+    groupeSanguin: "",
+    allergies: "",
+    antecedents: ""
   });
 
-  const [submitting, setSubmitting] = useState(false);
-
-  // 🔹 Pré-remplir le formulaire avec les infos du patient
   useEffect(() => {
     if (patient) {
       setFormData({
         name: patient.name || "",
         dossier: patient.dossier || "",
         phone: patient.phone || "",
-        address: patient.address || "",
         email: patient.email || "",
-        birthday: patient.birthday
-          ? new Date(patient.birthday).toISOString().slice(0, 10)
-          : "",
+        address: patient.address || "",
+        dateNaissance: patient.dateNaissance || "",
+        groupeSanguin: patient.groupeSanguin || "",
+        allergies: patient.allergies || "",
+        antecedents: patient.antecedents || ""
       });
     }
   }, [patient]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!patient) return;
-
-    setSubmitting(true);
     try {
-      await onEditPatient({
-        ...patient,              // garde _id, photo, dossier, etc.
-        name: formData.name,
-        dossier: formData.dossier, // reste identique, non modifiable dans l’UI
-        phone: formData.phone,
-        address: formData.address,
-        email: formData.email,
-        birthday: formData.birthday,
-      });
+      const handler = onEditPatient || onUpdatePatient;
+      if (handler) {
+        await handler({ ...patient, ...formData });
+      }
       onClose();
-    } catch (err) {
-      console.error("Erreur lors de la modification du patient :", err);
-      alert("Impossible de sauvegarder les modifications (voir console).");
-    } finally {
-      setSubmitting(false);
+    } catch (error) {
+      console.error("Erreur lors de la modification:", error);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-gradient-to-br from-white via-slate-50 to-indigo-50 rounded-2xl shadow-2xl w-full max-w-3xl relative overflow-hidden">
-        {/* Header */}
-        <div className="flex justify-between items-center px-8 pt-6 pb-4 border-b border-slate-200/80">
-          <h2 className="text-2xl font-bold text-indigo-600">
-            Modifier Patient
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 transition-colors"
-          >
-            <FiX size={22} />
-          </button>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative overflow-hidden border-2 border-gray-100 max-h-[90vh] overflow-y-auto">
+        {/* En-tête du modal */}
+        <div className="bg-gradient-to-r from-blue-800 to-blue-900 p-6 text-white sticky top-0 z-10">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm border border-white/30">
+                <FiUser className="text-2xl text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">Modifier le Patient</h2>
+                <p className="text-blue-100">Mise à jour des informations médicales</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-xl transition-colors border border-transparent hover:border-white/30"
+            >
+              <FiX size={24} className="text-white" />
+            </button>
+          </div>
         </div>
 
-        {/* Formulaire */}
-        <form onSubmit={handleSubmit} className="px-8 pb-8 pt-4 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-            {/* Nom complet */}
+        <div className="p-8">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Informations personnelles */}
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
-                <FiUser className="inline mr-2 text-indigo-500" />
-                Nom complet
-              </label>
-              <input
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none bg-white shadow-sm"
-              />
+              <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
+                <FiUser className="mr-3 text-blue-900" />
+                Informations Personnelles
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Nom complet
+                  </label>
+                  <input
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all duration-300 font-medium"
+                    placeholder="Nom et prénom"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Numéro de dossier
+                  </label>
+                  <input
+                    name="dossier"
+                    value={formData.dossier}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all duration-300 font-medium"
+                    placeholder="Dossier #"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    <FiPhone className="inline mr-2 text-blue-900" />
+                    Téléphone
+                  </label>
+                  <input
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all duration-300 font-medium"
+                    placeholder="+212 600-000000"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    <FiMail className="inline mr-2 text-blue-900" />
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all duration-300 font-medium"
+                    placeholder="patient@exemple.com"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    <FiHome className="inline mr-2 text-blue-900" />
+                    Adresse
+                  </label>
+                  <input
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all duration-300 font-medium"
+                    placeholder="Adresse complète"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    <FiCalendar className="inline mr-2 text-blue-900" />
+                    Date de naissance
+                  </label>
+                  <input
+                    type="date"
+                    name="dateNaissance"
+                    value={formData.dateNaissance}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all duration-300 font-medium"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Numéro de dossier (lecture seule) */}
+            {/* Informations médicales */}
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
-                <FiFileText className="inline mr-2 text-indigo-500" />
-                Numéro de dossier
-              </label>
-              <input
-                name="dossier"
-                value={formData.dossier}
-                readOnly
-                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed shadow-sm"
-              />
+              <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
+                <FiFileText className="mr-3 text-blue-900" />
+                Informations Médicales
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Groupe sanguin
+                  </label>
+                  <select
+                    name="groupeSanguin"
+                    value={formData.groupeSanguin}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all duration-300 font-medium"
+                  >
+                    <option value="">Sélectionner</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Allergies
+                  </label>
+                  <input
+                    name="allergies"
+                    value={formData.allergies}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all duration-300 font-medium"
+                    placeholder="Ex: Pénicilline, Arachides..."
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Antécédents médicaux
+                </label>
+                <textarea
+                  name="antecedents"
+                  value={formData.antecedents}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all duration-300 font-medium"
+                  placeholder="Antécédents médicaux, chirurgicaux, familiaux..."
+                />
+              </div>
             </div>
 
-            {/* Téléphone */}
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
-                <FiPhone className="inline mr-2 text-indigo-500" />
-                Téléphone
-              </label>
-              <input
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none bg-white shadow-sm"
-              />
+            {/* Boutons */}
+            <div className="flex justify-end space-x-4 pt-8 border-t-2 border-gray-200">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-8 py-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-xl transition-all duration-300 hover:shadow-lg border-2 border-gray-300"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="px-8 py-4 bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-blue-900 flex items-center space-x-2"
+              >
+                <FiCheck className="text-xl" />
+                <span>Sauvegarder les Modifications</span>
+              </button>
             </div>
-
-            {/* Adresse */}
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
-                <FiHome className="inline mr-2 text-indigo-500" />
-                Adresse
-              </label>
-              <input
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none bg-white shadow-sm"
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
-                <FiMail className="inline mr-2 text-indigo-500" />
-                Email
-              </label>
-              <input
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none bg-white shadow-sm"
-              />
-            </div>
-
-            {/* Date de naissance */}
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
-                <FiCalendar className="inline mr-2 text-indigo-500" />
-                Date de naissance
-              </label>
-              <input
-                name="birthday"
-                type="date"
-                value={formData.birthday}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none bg-white shadow-sm"
-              />
-            </div>
-          </div>
-
-          {/* Boutons */}
-          <div className="flex justify-end gap-4 pt-4 border-t border-slate-200/70 mt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-3 rounded-xl bg-slate-100 text-slate-700 font-medium hover:bg-slate-200 transition"
-            >
-              Annuler
-            </button>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-7 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-semibold shadow-md hover:from-indigo-600 hover:to-violet-600 disabled:opacity-70 disabled:cursor-not-allowed transition"
-            >
-              {submitting ? "Sauvegarde..." : "Sauvegarder les modifications"}
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

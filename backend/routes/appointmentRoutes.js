@@ -1,14 +1,12 @@
 // backend/routes/appointmentRoutes.js
-const express = require('express');
-const Appointment = require('../models/Appointment');
-const Patient = require('../models/patientModel');
-
+const express = require("express");
+const Appointment = require("../models/Appointment");
+const Patient = require("../models/patientModel");
+const User = require("../models/User");
 const router = express.Router();
 
-const {
-  getMoroccanHolidays,
-  getVariableIslamicHolidays,
-} = require('../utils/holidays');
+const { getMoroccanHolidays, getVariableIslamicHolidays } = require("../utils/holidays");
+
 
 /* -----------------------------------------
    🔎 Vérifier si une date est un jour interdit
@@ -16,7 +14,7 @@ const {
 function isForbiddenDate(date) {
   const day = date.getDay();
 
-  // 🔴 Week-end (dimanche = 0, samedi = 6)
+  // 🔴 Week-end
   if (day === 0 || day === 6) return true;
 
   const year = date.getFullYear();
@@ -24,32 +22,20 @@ function isForbiddenDate(date) {
   // 🔵 Jours fériés fixes
   const fixed = getMoroccanHolidays(year);
 
-  // 🟣 Jours islamiques
+  // 🟣 Jours islamiques prévision 2025
   const islamic = getVariableIslamicHolidays();
 
-  const formatted = date.toISOString().split('T')[0];
+  const formatted = date.toISOString().split("T")[0];
 
   return fixed.includes(formatted) || islamic.includes(formatted);
 }
 
 /* -----------------------------------------
    🟢 1) CRÉATION RENDEZ-VOUS  (POST /api/appointments)
-   Body attendu depuis le frontend :
-   {
-     patientId: "id du patient",
-     date: "2025-12-04T08:00",
-     motif: "texte..."   // optionnel
-   }
 --------------------------------------------*/
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   try {
-    const { patientId, date, motif } = req.body;
-
-    if (!patientId || !date) {
-      return res
-        .status(400)
-        .json({ message: 'patientId et date sont obligatoires.' });
-    }
+    const { patient, medecin, date, duration, notes } = req.body;
 
     const finalDate = new Date(date);
 
@@ -61,109 +47,64 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // 🔎 Vérifier que le patient existe
-    const patient = await Patient.findById(patientId);
-    if (!patient) {
-      return res.status(404).json({ message: 'Patient non trouvé.' });
-    }
-
-    // 🔑 Récupérer l'utilisateur connecté pour le champ "medecin"
-    // (suivant ton authMiddleware, ça peut être id, _id ou userId)
-    const currentUserId =
-      req.user?.id || req.user?._id || req.user?.userId || null;
-
-    if (!currentUserId) {
-      return res
-        .status(401)
-        .json({ message: "Utilisateur non authentifié (token invalide)." });
-    }
-
-    // 🔎 Vérifier si ce médecin a déjà un RDV à cette heure exacte
+    // 🔎 Vérifier si ce médecin a déjà un RDV à cette heure
     const conflict = await Appointment.findOne({
-      medecin: currentUserId,
+      medecin,
       date: finalDate,
     });
 
     if (conflict) {
       return res.status(400).json({
-        message: 'Ce médecin a déjà un rendez-vous à cette heure-là.',
+        message: "Ce médecin a déjà un rendez-vous à cette heure-là.",
       });
     }
 
-    // 💾 Enregistrer le rendez-vous
+    // 💾 Enregistrer RDV
     const rdv = new Appointment({
-      patient: patient._id,
-      medecin: currentUserId,
+      patient,
+      medecin,
       date: finalDate,
-      duration: 30, // par défaut
-      notes: motif || '',
+      duration,
+      notes,
     });
 
-    const saved = await rdv.save();
+    await rdv.save();
 
-    // 🔙 On renvoie un format simple que le frontend utilise
-    return res.status(201).json({
-      _id: saved._id,
-      patientId: patient._id,
-      patientName: patient.name,
-      date: saved.date,
-      motif: saved.notes,
-      status: saved.status,
+    return res.json({
+      message: "Rendez-vous créé avec succès.",
+      rdv,
     });
   } catch (error) {
-    console.error('Erreur création RDV :', error);
-    res.status(500).json({ message: 'Erreur serveur.' });
+    console.error("Erreur création RDV :", error);
+    res.status(500).json({ message: "Erreur serveur." });
   }
 });
 
 /* -----------------------------------------
    🟦 2) LISTE DES RENDEZ-VOUS (GET /api/appointments)
-   -> renvoie un tableau :
-   [
-     {
-       _id,
-       patientId,
-       patientName,
-       date,
-       motif,
-       status
-     },
-     ...
-   ]
 --------------------------------------------*/
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const rdv = await Appointment.find()
-      .populate('patient', 'name')
-      .populate('medecin', 'name specialty')
+      .populate("patient", "name")
+      .populate("medecin", "name specialty")
       .sort({ date: 1 });
 
-    const formatted = rdv.map((a) => ({
-      _id: a._id,
-      patientId: a.patient?._id || null,
-      patientName: a.patient?.name || 'Patient inconnu',
-      date: a.date,
-      motif: a.notes || '',
-      status: a.status,
-    }));
-
-    res.json(formatted);
+    res.json(rdv);
   } catch (error) {
-    console.error('Erreur récupération RDV :', error);
-    res.status(500).json({ message: 'Erreur serveur.' });
+    res.status(500).json({ message: "Erreur serveur." });
   }
 });
 
 /* -----------------------------------------
    🟨 3) SUPPRESSION (DELETE /api/appointments/:id)
 --------------------------------------------*/
-router.delete('/:id', async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     await Appointment.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Rendez-vous supprimé.' });
+    res.json({ message: "Rendez-vous supprimé." });
   } catch (error) {
-    console.error('Erreur suppression RDV :', error);
-    res.status(500).json({ message: 'Erreur serveur.' });
+    res.status(500).json({ message: "Erreur serveur." });
   }
 });
 

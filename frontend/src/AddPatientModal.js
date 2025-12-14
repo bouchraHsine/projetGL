@@ -1,28 +1,15 @@
 // src/AddPatientModal.js
-import axios from "axios";
-import React, { useState } from "react";
-import {
-  FiUser,
-  FiPhone,
-  FiHome,
-  FiCamera,
-  FiMail,
-  FiCalendar,
-  FiX,
-} from "react-icons/fi";
+import React, { useState } from 'react';
+import { FiUser, FiFileText, FiPhone, FiHome, FiCamera, FiX } from 'react-icons/fi';
 
 function AddPatientModal({ onClose, onAddPatient }) {
   const [formData, setFormData] = useState({
     name: "",
+    dossier: "",
     phone: "",
     address: "",
-    email: "",
-    birthday: "",
-    photo: null,
+    photo: null
   });
-
-  const [submitting, setSubmitting] = useState(false);
-  const token = localStorage.getItem("authToken");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -35,165 +22,147 @@ function AddPatientModal({ onClose, onAddPatient }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (submitting) return;
-    setSubmitting(true);
 
     const formPayload = new FormData();
-    formPayload.append("name", formData.name);
-    formPayload.append("phone", formData.phone);
-    formPayload.append("address", formData.address);
-    if (formData.email) formPayload.append("email", formData.email);
-    if (formData.birthday) formPayload.append("birthday", formData.birthday);
-    if (formData.photo) formPayload.append("photo", formData.photo);
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value) formPayload.append(key, value);
+    });
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/patients",
-        formPayload,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      onAddPatient(response.data);
+      // 👉 C’est le parent qui fait l’appel axios
+      await onAddPatient(formPayload);
       onClose();
     } catch (error) {
       console.error("Erreur lors de l'ajout du patient", error);
-      alert("Impossible d'ajouter le patient (voir console).");
-    } finally {
-      setSubmitting(false);
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8 relative">
-        <div className="flex justify-between items-start mb-6">
-          <h2 className="text-2xl font-bold text-indigo-600">
-            Nouveau Patient
-          </h2>
-
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-indigo-600"
-          >
-            <FiX size={24} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Nom */}
-            <div>
-              <label className="block text-sm mb-2">
-                <FiUser className="inline mr-2" />
-                Nom complet
-              </label>
-              <input
-                name="name"
-                required
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border focus:border-indigo-400"
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm mb-2">
-                <FiMail className="inline mr-2" />
-                Email
-              </label>
-              <input
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border focus:border-indigo-400"
-              />
-            </div>
-
-            {/* Téléphone */}
-            <div>
-              <label className="block text-sm mb-2">
-                <FiPhone className="inline mr-2" />
-                Téléphone
-              </label>
-              <input
-                name="phone"
-                required
-                value={formData.phone}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border focus:border-indigo-400"
-              />
-            </div>
-
-            {/* Adresse */}
-            <div>
-              <label className="block text-sm mb-2">
-                <FiHome className="inline mr-2" />
-                Adresse
-              </label>
-              <input
-                name="address"
-                required
-                value={formData.address}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border focus:border-indigo-400"
-              />
-            </div>
-
-            {/* Date naissance */}
-            <div>
-              <label className="block text-sm mb-2">
-                <FiCalendar className="inline mr-2" />
-                Date de naissance
-              </label>
-              <input
-                name="birthday"
-                type="date"
-                value={formData.birthday}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border focus:border-indigo-400"
-              />
-            </div>
-
-            {/* Photo */}
-            <div className="col-span-full">
-              <label className="block text-sm mb-2">
-                <FiCamera className="inline mr-2" />
-                Photo d'identité
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoChange}
-                className="w-full"
-              />
-            </div>
-          </div>
-
-          {/* Boutons */}
-          <div className="flex justify-end space-x-3">
+      <div className="bg-gradient-to-br from-white to-indigo-50 rounded-2xl shadow-2xl w-full max-w-2xl relative overflow-hidden">
+        <div className="p-8">
+          <div className="flex justify-between items-start mb-8">
+            <h2 className="text-2xl font-bold text-indigo-600 text-center mb-6">
+              Nouveau Patient
+            </h2>
             <button
-              type="button"
               onClick={onClose}
-              className="px-5 py-2 bg-gray-100 rounded-xl hover:bg-gray-200"
+              className="text-gray-500 hover:text-indigo-600 transition-colors"
             >
-              Annuler
-            </button>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700"
-            >
-              {submitting ? "Ajout en cours..." : "Ajouter le Patient"}
+              <FiX size={24} />
             </button>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Nom */}
+              <div className="relative group">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
+                  <FiUser className="inline mr-2 text-indigo-500" />
+                  Nom complet
+                </label>
+                <input
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                  placeholder="Dr. John Doe"
+                  required
+                />
+              </div>
+
+              {/* Dossier */}
+              <div className="relative group">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
+                  <FiFileText className="inline mr-2 text-indigo-500" />
+                  Numéro de dossier
+                </label>
+                <input
+                  name="dossier"
+                  value={formData.dossier}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                  placeholder="Dossier #"
+                  required
+                />
+              </div>
+
+              {/* Téléphone */}
+              <div className="relative group">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
+                  <FiPhone className="inline mr-2 text-indigo-500" />
+                  Téléphone
+                </label>
+                <input
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                  placeholder="+212 600-000000"
+                  required
+                />
+              </div>
+
+              {/* Adresse */}
+              <div className="relative group">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
+                  <FiHome className="inline mr-2 text-indigo-500" />
+                  Adresse
+                </label>
+                <input
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                  placeholder="Adresse complète"
+                  required
+                />
+              </div>
+
+              {/* Photo */}
+              <div className="col-span-full">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
+                  <FiCamera className="inline mr-2 text-indigo-500" />
+                  Photo d'identité
+                </label>
+                <div className="flex items-center justify-center w-full">
+                  <label className="flex flex-col w-full h-32 border-4 border-dashed border-indigo-100 hover:border-indigo-300 hover:bg-indigo-50 transition-all rounded-2xl cursor-pointer">
+                    <div className="flex flex-col items-center justify-center pt-5">
+                      <FiCamera className="w-8 h-8 text-indigo-400" />
+                      <p className="pt-1 text-sm text-gray-500">
+                        {formData.photo ? formData.photo.name : 'Glissez-déposez ou cliquez pour uploader'}
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      name="photo"
+                      onChange={handlePhotoChange}
+                      className="opacity-0"
+                      accept="image/*"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Boutons */}
+            <div className="flex justify-end space-x-4 mt-8">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition-all duration-300 font-medium"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-indigo-200"
+              >
+                Ajouter le Patient
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

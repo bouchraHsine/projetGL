@@ -1,4 +1,3 @@
-// backend/server.js
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -6,99 +5,89 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
 
+// ============================
+// Imports des routes
+// ============================
 const authRoutes = require('./routes/authRoutes');
 const patientRoutes = require('./routes/patientRoutes');
 const dashboardRoutes = require('./routes/dashboard');
 const dashboardAdvanced = require('./routes/dashboardAdvanced');
 const appointmentRoutes = require('./routes/appointmentRoutes');
+const medecinRoutes = require('./routes/medecinRoutes');
+const consultationRoutes = require('./routes/consultationRoutes');
 
+// Routes venant de la branche main (⚠ ajoutées et fusionnées)
+const doctorRoutes = require('./routes/doctorRoutes');
+const staffRoutes = require("./routes/staffRoutes");
+const roomRoutes = require("./routes/roomRoutes");
+
+// ============================
+// Middlewares
+// ============================
 const authMiddleware = require('./middleware/authMiddleware');
 const verifyRole = require('./middleware/verifyRole');
 
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
 
 // ============================
 // Middlewares globaux
 // ============================
 app.use(bodyParser.json());
 app.use(cors());
+app.use("/uploads", express.static(path.join(__dirname, "uploads"))); 
 
-// Middleware de log simple
-app.use((req, res, next) => {
-  console.log(
-    `[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`
-  );
+app.use((req,res,next)=>{
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
 });
 
-// Fichiers uploads (photos, docs)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// ============================
+// MongoDB
+// ============================
+mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/hopital', {
+  useNewUrlParser:true, 
+  useUnifiedTopology:true
+})
+.then(()=>console.log("✅ MongoDB connecté"))
+.catch(err=>console.error("❌ Erreur MongoDB:",err));
 
 // ============================
-// Connexion MongoDB
+// ROUTES
 // ============================
-const dbURL = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/hopital';
 
-mongoose
-  .connect(dbURL, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('✅ Connexion MongoDB réussie'))
-  .catch((err) => console.error('❌ Erreur MongoDB:', err));
-
-// ============================
-// Routes AUTH (publiques)
-// ============================
+// 🔓 Auth
 app.use('/api/auth', authRoutes);
 
-// ============================
-// Routes protégées (staff)
-// ============================
+// 👥 Patients
+app.use('/api/patients', authMiddleware, verifyRole(['admin','medecin','secretaire']), patientRoutes);
 
-// Patients : accès admin / medecin / secretaire
-app.use(
-  '/api/patients',
-  authMiddleware,
-  verifyRole(['admin', 'medecin', 'secretaire']),
-  patientRoutes
-);
+// 📅 Appointments
+app.use('/api/appointments', authMiddleware, verifyRole(['admin','medecin','secretaire']), appointmentRoutes);
 
-// Médecins
-app.use('/api/doctors', require('./routes/doctorRoutes'));
+// 📊 Dashboard
+app.use('/api/dashboard', authMiddleware, verifyRole(['admin','medecin','secretaire']), dashboardRoutes);
+app.use('/api/dashboard/advanced', authMiddleware, verifyRole(['admin','medecin','secretaire']), dashboardAdvanced);
 
-// Rendez-vous
-app.use(
-  '/api/appointments',
-  authMiddleware,
-  verifyRole(['admin', 'medecin', 'secretaire']),
-  appointmentRoutes
-);
+// 🧑‍⚕ Upload Photo / Profil Médecin
+app.use('/api/medecins', authMiddleware, verifyRole(['admin','medecin']), medecinRoutes);
 
-// Dashboard analytique avancé
-app.use(
-  '/api/dashboard/advanced',
-  authMiddleware,
-  verifyRole(['admin', 'medecin', 'secretaire']),
-  dashboardAdvanced
-);
+// 📄 Nouvelle route consultation
+app.use('/api/consultations', authMiddleware, verifyRole(['medecin']), consultationRoutes);
 
-// Dashboard simple
-app.use(
-  '/api/dashboard',
-  authMiddleware,
-  verifyRole(['admin', 'medecin', 'secretaire']),
-  dashboardRoutes
-);
+// 🔥 Routes ajoutées du main (fusion OK)
+app.use("/api/staff", staffRoutes);
+app.use("/api/doctors", authMiddleware, verifyRole(['admin']), doctorRoutes);
+app.use("/api/salles", roomRoutes);
 
 // ============================
 // 404
 // ============================
-app.use((req, res, next) => {
-  res.status(404).json({ error: 'Route non trouvée' });
+app.use((req,res)=>{
+  res.status(404).json({error:"Route introuvable"});
 });
 
 // ============================
-// Démarrage serveur
+// START SERVER
 // ============================
-app.listen(port, () =>
-  console.log(`🚀 Serveur démarré sur http://localhost:${port}`)
-);
+app.listen(port, ()=>console.log(`🚀 Serveur lancé : http://localhost:${port}`));
