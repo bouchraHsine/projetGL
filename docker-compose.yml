@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:6
+    container_name: neohealth-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  backend:
+    build:
+      context: ./backend
+    container_name: neohealth-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/hopital
+    depends_on:
+      - mongo
+    volumes:
+      - ./backend:/app        # 🔥 Hot reload backend
+      - /app/node_modules     # Évite les conflits host/container
+      - ./backend/uploads:/app/uploads  # 👈 Ajoute cette ligne pour partager le dossier uploads
+    command: ["npm", "run", "dev"]   # Nodemon pour auto-reload
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: neohealth-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app       # 🔥 Hot reload frontend
+      - /app/node_modules     # Évite les conflits
+    command: ["npm", "start"]  # React auto-reload
+
+volumes:
+  mongo-data:
